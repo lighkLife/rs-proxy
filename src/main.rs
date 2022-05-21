@@ -3,6 +3,7 @@ use std::net::{SocketAddrV4, TcpListener, TcpStream};
 use std::{io, thread};
 use std::sync::Arc;
 use clap::Parser;
+use log::LevelFilter;
 
 #[macro_use]
 extern crate log;
@@ -15,7 +16,7 @@ const LISTENER_PORT_DEFAULT: u16 = 21883;
 struct Args {
     /// local listen port, default 21883, example: 31883
     #[clap(short, long)]
-    port: Option<u16>,
+    listen: Option<u16>,
 
     /// target server address, example: 192.168.0.10:1883
     #[clap(short, long)]
@@ -24,10 +25,10 @@ struct Args {
 
 
 fn main() {
-    env_logger::init();
+    env_logger::builder().filter_level(LevelFilter::Info).init();
 
     let args: Args = Args::parse();
-    let port = args.port.unwrap_or(LISTENER_PORT_DEFAULT);
+    let port = args.listen.unwrap_or(LISTENER_PORT_DEFAULT);
     let target_addr: SocketAddrV4 = args.target.parse()
         .expect("Invalid Socket address");
     let listen_addr = "127.0.0.1:".to_string() + &port.to_string();
