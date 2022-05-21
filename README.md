@@ -28,3 +28,12 @@ OPTIONS:
 Communication across network segments.
 
 ![rs-proxy-mqtt](./doc/rs-proxy-mqtt.png)
+
+## Build
+```shell
+# build for x86 linux64
+cargo build --release  --target x86_64-unknown-linux-gnu
+
+# build for x86 windows64
+cargo build --release  --target x86_64-pc-windows-gnu
+```
