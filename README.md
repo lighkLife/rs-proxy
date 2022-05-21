@@ -1,2 +1,26 @@
 # rs-proxy
-tcp proxy write by rustlang
+A simple tcp proxy service.
+
+![rs-proxy](./doc/rs-proxy.png)
+
+## Usage
+```shell
+$ ./rs-proxy -h
+rs-proxy 0.1.0
+a simple tcp proxy service
+
+USAGE:
+    rs-proxy [OPTIONS] --target <TARGET>
+
+OPTIONS:
+    -h, --help               Print help information
+    -p, --port <PORT>        local listen port, default 21883, example: 31883
+    -t, --target <TARGET>    target server address, example: 192.168.0.10:1883
+    -V, --version            Print version information
+
+```
+
+## Examples
+Communication across network segments.
+
+![](./doc/rs-proxy-mqtt.png)
