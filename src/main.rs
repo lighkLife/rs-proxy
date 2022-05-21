@@ -1,6 +1,7 @@
 use std::io::{Result};
 use std::net::{SocketAddrV4, TcpListener, TcpStream};
 use std::{io, thread};
+use std::fmt::Debug;
 use std::sync::Arc;
 use clap::Parser;
 use log::LevelFilter;
@@ -31,35 +32,30 @@ fn main() {
     let port = args.listen.unwrap_or(LISTENER_PORT_DEFAULT);
     let target_addr: SocketAddrV4 = args.target.parse()
         .expect("Invalid Socket address");
-    let listen_addr = "127.0.0.1:".to_string() + &port.to_string();
+    let listen_addr = "0.0.0.0:".to_string() + &port.to_string();
 
     info!("rs-proxy starting... ");
     info!("listen to {}, target address is {}", listen_addr, target_addr);
 
-    match start_service(listen_addr, target_addr) {
-        Err(e) => {
-            error!("Start rs-proxy failed. {}", e)
-        }
-        _ => {}
-    }
+    start_service(listen_addr, target_addr);
 }
 
-fn start_service(listen_addr: String, target_addr: SocketAddrV4) -> Result<()> {
+fn start_service(listen_addr: String, target_addr: SocketAddrV4) {
     let listener = TcpListener::bind(&listen_addr)
         .expect("Failed start Listener");
-    let target_stream = TcpStream::connect(target_addr)
-        .expect("Failed connect target host.");
     info!("rs-proxy started.");
 
     for listen_stream in listener.incoming() {
-        handle_client(listen_stream?, &target_stream)?;
+        handle_client(listen_stream.unwrap(), target_addr)
+            .expect("error occurred in listener")
     }
-    Ok(())
 }
 
-fn handle_client(listen_stream: TcpStream, target_stream: &TcpStream) -> Result<()> {
+fn handle_client(listen_stream: TcpStream, target_addr: SocketAddrV4) -> Result<()> {
+    let target_stream = TcpStream::connect(target_addr)
+        .expect("Failed connect target host.");
     info!("Connection established from {}", listen_stream.peer_addr()?);
-    info!("Connection established by {}", &target_stream.peer_addr()?);
+    info!("Connection established to {}", &target_stream.peer_addr()?);
 
     let listen_arc = Arc::new(listen_stream);
     let target_arc = Arc::new(target_stream);
