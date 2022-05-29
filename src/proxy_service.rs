@@ -3,8 +3,10 @@ use std::str::FromStr;
 use std::{io, thread};
 use std::sync::Arc;
 use std::thread::JoinHandle;
+
+use anyhow::{Context, Result};
 use thread::spawn;
-use log::info;
+use log::{error, info, warn};
 
 pub struct ProxyService {
     name: Arc<Option<String>>,
@@ -13,7 +15,7 @@ pub struct ProxyService {
 }
 
 impl ProxyService {
-    pub fn new(name: Option<String>, listen: u16, target: String) -> Result<ProxyService, AddrParseError> {
+    pub fn new(name: Option<String>, listen: u16, target: String) -> Result<ProxyService> {
         let listen_socket = SocketAddrV4::new(Ipv4Addr::from_str("127.0.0.1")?, listen);
         let target_socket = SocketAddrV4::from_str(target.as_str())?;
         Ok(ProxyService {
@@ -31,31 +33,42 @@ impl ProxyService {
             let listener = TcpListener::bind(*listen)
                 .expect("Failed start Listener");
             for incoming in listener.incoming() {
-                hand_client(incoming, target.clone());
+                match hand_client(incoming, target.clone()) {
+                    Err(e) => error!("hand_client error, {:?}", e),
+                    _ => {}
+                };
             }
         })
     }
 }
 
-fn hand_client(incoming: io::Result<TcpStream>, target: Arc<SocketAddrV4>) {
-    let listen_stream = incoming
-        .expect("Failed connect target host.");
-    let target_stream = TcpStream::connect(*target)
-        .expect("Failed connect target host.");
-    info!("Connection established from {}", listen_stream.peer_addr().unwrap());
-    info!("Connection established to {}", &target_stream.peer_addr().unwrap());
-    transfer_stream(listen_stream, target_stream)
-        .unwrap();
+fn hand_client(incoming: io::Result<TcpStream>, target: Arc<SocketAddrV4>) -> Result<()> {
+    let listen_stream = incoming?;
+    let target_stream = TcpStream::connect(*target)?;
+    info!("Connection established from {}", listen_stream.peer_addr()?);
+    info!("Connection established to {}", &target_stream.peer_addr()?);
+    transfer_stream(listen_stream, target_stream)?;
+    Ok(())
 }
 
-fn transfer_stream(listen_stream: TcpStream, target_stream: TcpStream) -> io::Result<()> {
+fn transfer_stream(listen_stream: TcpStream, target_stream: TcpStream) -> Result<()> {
     let listen_arc = Arc::new(listen_stream);
     let target_arc = Arc::new(target_stream);
 
     let (mut listen_rx, mut listen_tx) = (listen_arc.try_clone()?, listen_arc.try_clone()?);
     let (mut target_rx, mut target_tx) = (target_arc.try_clone()?, target_arc.try_clone()?);
 
-    spawn(move || io::copy(&mut listen_rx, &mut target_tx).unwrap());
-    spawn(move || io::copy(&mut target_rx, &mut listen_tx).unwrap());
+    spawn(move || {
+        match io::copy(&mut listen_rx, &mut target_tx) {
+            Err(e) => error!("copy client request to target failed. {:?}", e),
+            _ => {}
+        }
+    });
+    spawn(move || {
+        match io::copy(&mut target_rx, &mut listen_tx) {
+            Err(e) => error!("copy target response to client failed. {:?}", e),
+            _ => {}
+        }
+    });
     Ok(())
 }

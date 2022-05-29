@@ -6,9 +6,9 @@ extern crate toml;
 
 use clap::Parser;
 use std::fs::File;
-use std::io::{ Read, Result, Write};
+use std::io::{Read, Write};
 use std::path::Path;
-
+use anyhow::{Context, Result};
 
 use log::LevelFilter;
 use rs_proxy::{ProxyService, RsProxyArgs, RsProxyConfig};

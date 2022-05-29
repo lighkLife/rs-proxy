@@ -7,4 +7,4 @@ target = "127.0.0.1:1883"
 [[proxy]]
 name = "example2"
 listen = 22883
-target = "127.0.0.1:1883"
+target = "127.0.0.1:2883"
