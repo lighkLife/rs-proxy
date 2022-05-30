@@ -22,7 +22,7 @@ pub struct RsProxyConfig
 #[derive(Deserialize)]
 #[derive(Debug)]
 pub struct ProxyConfig {
-    pub name: Option<String>,
+    pub name: String,
     pub listen: u16,
     pub target: String,
 }

@@ -8,7 +8,7 @@ use clap::Parser;
 use std::fs::File;
 use std::io::{Read, Write};
 use std::path::Path;
-use anyhow::{Context, Result};
+use anyhow::{ Result};
 
 use log::LevelFilter;
 use rs_proxy::{ProxyService, RsProxyArgs, RsProxyConfig};
