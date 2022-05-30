@@ -16,7 +16,7 @@ pub struct ProxyService {
 
 impl ProxyService {
     pub fn new(name: Option<String>, listen: u16, target: String) -> Result<ProxyService> {
-        let listen_socket = SocketAddrV4::new(Ipv4Addr::from_str("127.0.0.1")?, listen);
+        let listen_socket = SocketAddrV4::new(Ipv4Addr::from_str("0.0.0.0")?, listen);
         let target_socket = SocketAddrV4::from_str(target.as_str())?;
         Ok(ProxyService {
             name: Arc::new(name),
