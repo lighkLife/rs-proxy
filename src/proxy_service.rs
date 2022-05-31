@@ -1,12 +1,14 @@
 use std::net::{Ipv4Addr, Shutdown, SocketAddrV4, TcpListener, TcpStream};
 use std::str::FromStr;
 use std::{io, thread};
+use std::rc::Rc;
 use std::sync::Arc;
 use std::thread::JoinHandle;
 
 use anyhow::{Result};
 use thread::spawn;
 use log::{error, info};
+use crate::ProxyConfig;
 
 pub struct ProxyService {
     name: Arc<String>,
@@ -16,11 +18,11 @@ pub struct ProxyService {
 
 
 impl ProxyService {
-    pub fn new(name: String, listen: u16, target: String) -> Result<ProxyService> {
-        let listen_socket = SocketAddrV4::new(Ipv4Addr::from_str("0.0.0.0")?, listen);
-        let target_socket = SocketAddrV4::from_str(target.as_str())?;
+    pub fn new(config: Rc<ProxyConfig>) -> Result<ProxyService> {
+        let listen_socket = SocketAddrV4::new(Ipv4Addr::from_str("0.0.0.0")?, config.listen);
+        let target_socket = SocketAddrV4::from_str(config.target.as_str())?;
         Ok(ProxyService {
-            name: Arc::new(name),
+            name: Arc::new(config.name.clone()),
             listen: Arc::new(listen_socket),
             target: Arc::new(target_socket),
         })
