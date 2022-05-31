@@ -3,6 +3,9 @@ A simple tcp proxy service.
 
 ![rs-proxy](./doc/rs-proxy.png)
 
+## Why rs-proxy
+`Smaller, faster and more convenient. Save your "memory"!`
+
 ## Usage
 
 ```shell
@@ -18,6 +21,19 @@ OPTIONS:
     -h, --help               Print help information
     -V, --version            Print version information
 
+```
+## Config
+```toml
+[[proxy]]
+name = "example1" 
+listen = 21883
+target = "127.0.0.1:1883"
+
+[[proxy]]
+enable = false # Optional, default true, set false to ignore current proxy
+name = "example2"
+listen = 22883
+target = "127.0.0.1:2883"
 ```
 
 ## Examples
