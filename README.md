@@ -30,7 +30,7 @@ listen = 21883
 target = "127.0.0.1:1883"
 
 [[proxy]]
-enable = false # Optional, default true, set false to ignore current proxy
+enable = false # Optional, default true, set false to disable current proxy
 name = "example2"
 listen = 22883
 target = "127.0.0.1:2883"
