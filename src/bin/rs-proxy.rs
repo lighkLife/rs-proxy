@@ -16,9 +16,11 @@ use rs_proxy::{ProxyService, RsProxyArgs, RsProxyConfig};
 
 pub static CONFIG_EXAMPLE: &str = r#"
 [[proxy]]
+enable = true
 name = "example"
 listen = 21883
 target = "127.0.0.1:1883"
+allow_list = []
 "#;
 
 fn main() -> Result<()> {

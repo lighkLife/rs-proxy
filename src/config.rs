@@ -1,3 +1,4 @@
+use std::collections::HashSet;
 use clap::Parser;
 use serde_derive::Deserialize;
 
@@ -26,4 +27,5 @@ pub struct ProxyConfig {
     pub name: String,
     pub listen: u16,
     pub target: String,
+    pub allow_list: Option<HashSet<String>>,
 }
