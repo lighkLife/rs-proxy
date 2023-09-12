@@ -1,11 +1,11 @@
 [[proxy]]
 name = "example1"
-listen = 11883
-target = "127.0.0.1:1883"
+listen = 12883
+target = "172.16.11.136:2883"
 allow_list = ["172.16.104.112", "127.0.0.1"]
 
 [[proxy]]
 name = "example2"
-listen = 12883
-target = "127.0.0.1:1883"
-allow_list = ["172.16.104.1"]
+listen = 22883
+target = "172.16.11.136:2883"
+allow_list = ["172.16.104.112"]
