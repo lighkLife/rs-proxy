@@ -1,10 +1,12 @@
-use std::{io, thread};
+use Ordering::Relaxed;
+use std::thread;
 use std::collections::HashSet;
+use std::io::{Read, Write};
 use std::net::{Ipv4Addr, Shutdown, SocketAddrV4, TcpListener, TcpStream};
 use std::rc::Rc;
 use std::str::FromStr;
 use std::sync::Arc;
-use std::sync::atomic::AtomicU32;
+use std::sync::atomic::{AtomicU32, Ordering};
 use std::thread::JoinHandle;
 use thread::spawn;
 
@@ -39,12 +41,23 @@ impl Connection {
             })?;
         info!("{} connection established from {}", name, listen_stream.peer_addr()?);
         info!("{} connection established to {}", name, target_stream.peer_addr()?);
-        let mut con = Connection {
+
+        let mut rx = 0;
+        if let Some(con) = pre.clone().as_ref() {
+            rx = con.rx_bytes.load(Relaxed);
+        }
+        let mut tx = 0;
+        if let Some(con) = pre.clone().as_ref() {
+            tx = con.tx_bytes.load(Relaxed);
+        }
+        // let tx = pre.clone().map_or( 0, |it| it.tx_bytes.load(Relaxed).clone());
+
+        let con = Connection {
             name,
             listen_stream: Arc::new(listen_stream),
             target_stream: Arc::new(target_stream),
-            rx_bytes: AtomicU32::new(0),
-            tx_bytes: AtomicU32::new(0),
+            rx_bytes: AtomicU32::new(rx),
+            tx_bytes: AtomicU32::new(tx),
         };
         return Ok(con);
     }
@@ -77,7 +90,7 @@ impl ProxyService {
         })
     }
 
-    pub fn run(mut self) -> JoinHandle<()> {
+    pub fn run(self) -> JoinHandle<()> {
         let name = self.name.clone();
         let listen = self.listen.clone();
         let target = self.target.clone();
@@ -89,7 +102,7 @@ impl ProxyService {
             for incoming in listener.incoming() {
                 let pre_connection = self.connection.clone();
                 let name = name.clone();
-                let result = match incoming {
+                match incoming {
                     Ok(stream) => {
                         match deny_if_need(allow_list.clone(), &stream) {
                             Ok(_) => {
@@ -110,7 +123,7 @@ impl ProxyService {
                     Err(e) => {
                         error!("{} connect source failed, {:?}", name.clone(), e);
                     }
-                };
+                }
             }
         })
     }
@@ -136,18 +149,66 @@ fn transfer_stream(con: Arc<Connection>) -> Result<()> {
     spawn(move || {
         let mut listen = request.listen_stream.as_ref();
         let mut target = request.target_stream.as_ref();
-        match io::copy(&mut listen, &mut target) {
-            Err(e) => error!("{} copy request failed. {:?}", name.clone(), e),
-            _ => {}
+        let mut buf = vec![0; 1024];
+        loop {
+            match listen.read(&mut buf) {
+                // Return value of `Ok(0)` signifies that the remote has
+                // closed
+                Ok(0) => {
+                    info!("connection close by peer");
+                    return;
+                },
+                Ok(n) => {
+                    // Copy the data back to socket
+                    request.rx_bytes.fetch_add(n as u32, Relaxed);
+                    info!("{} traffic rx={}, tx={}, {}", name.clone(), request.rx_bytes.load(Relaxed), request.tx_bytes.load(Relaxed), n);
+                    if target.write_all(&buf[..n]).is_err() {
+                        // Unexpected socket error. There isn't much we can
+                        // do here so just stop processing.
+                        info!("Unexpected socket error");
+                        return;
+                    }
+                }
+                Err(_) => {
+                    // Unexpected socket error. There isn't much we can do
+                    // here so just stop processing.
+                    info!("Unexpected socket error");
+                    return;
+                }
+            }
         }
     });
     let name = con.name.clone();
     spawn(move || {
         let mut listen = response.listen_stream.as_ref();
         let mut target = response.target_stream.as_ref();
-        match io::copy(&mut target, &mut listen) {
-            Err(e) => error!("{} copy response failed. {:?}", name.clone(), e),
-            _ => {}
+        let mut buf = vec![0; 1024];
+        loop {
+            match target.read(&mut buf) {
+                // Return value of `Ok(0)` signifies that the remote has
+                // closed
+                Ok(0) => {
+                    info!("connection close by peer");
+                    return;
+                },
+                Ok(n) => {
+                    // Copy the data back to socket
+                    response.tx_bytes.fetch_add(n as u32, Relaxed);
+                    info!("{} traffic rx={}, tx={}, {}", name.clone(), response.rx_bytes.load(Relaxed), response.tx_bytes.load(Relaxed), n);
+                    if listen.write_all(&buf[..n]).is_err() {
+                        // Unexpected socket error. There isn't much we can
+                        // do here so just stop processing.
+                        info!("Unexpected socket error");
+                        return;
+                    }
+                }
+                Err(_) => {
+                    // Unexpected socket error. There isn't much we can do
+                    // here so just stop processing.
+                    info!("Unexpected socket error");
+                    return;
+                }
+            }
         }
     });
     Ok(())
